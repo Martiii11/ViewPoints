@@ -1,0 +1,17 @@
+name: ViewPoints
+main: me.martiii.viewpoints.ViewPoints
+version: 1.0.0
+author: Martiii
+commands:
+  viewpoint:
+    permission: viewpoint.view
+    description: Go to a viewpoint
+  setviewpoint:
+    permission: viewpoint.set
+    description: Set a viewpoint
+  delviewpoint:
+    permission: viewpoint.delete
+    description: Delete a viewpoint
+  viewpointreload:
+    permission: viewpoint.reload
+    description: Reload config file
