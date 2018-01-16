@@ -1,6 +1,6 @@
 name: ViewPoints
 main: me.martiii.viewpoints.ViewPoints
-version: 1.0.0
+version: 1.2.0
 author: Martiii
 commands:
   viewpoint:

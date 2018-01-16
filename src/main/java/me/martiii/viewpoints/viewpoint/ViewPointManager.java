@@ -19,9 +19,26 @@ public class ViewPointManager {
     public void loadConfig(){
         viewpoints = new HashMap<>();
         FileConfiguration config = plugin.getConfig();
-        for (String viewpoint : config.getConfigurationSection("viewpoints").getKeys(false)){
-            Location loc = LocationSerializer.toLocation(config.getString("viewpoints." + viewpoint));
-            viewpoints.put(viewpoint, new ViewPoint(viewpoint, loc));
+        //Convert file config from old version
+        if (config.contains("config-version")){
+            if (config.getDouble("config-version") == 1.0){
+                if (config.contains("viewpoints")) {
+                    for (String viewpoint : config.getConfigurationSection("viewpoints").getKeys(false)) {
+                        String loc = config.getString("viewpoints." + viewpoint);
+                        plugin.getConfig().set("viewpoints." + viewpoint, null);
+                        plugin.getConfig().set("viewpoints." + viewpoint + ".loc", loc);
+                        plugin.getConfig().set("viewpoints." + viewpoint + ".type", ViewPointType.STATIC.toString());
+                    }
+                }
+                plugin.getConfig().set("config-version", 2.0);
+                plugin.saveConfig();
+            }
+        }
+        if (config.contains("viewpoints")) {
+            for (String viewpoint : config.getConfigurationSection("viewpoints").getKeys(false)) {
+                Location loc = LocationSerializer.toLocation(config.getString("viewpoints." + viewpoint + ".loc"));
+                viewpoints.put(viewpoint, new ViewPoint(viewpoint, loc, ViewPointType.valueOf(config.getString("viewpoints." + viewpoint + ".type"))));
+            }
         }
     }
 
@@ -35,7 +52,8 @@ public class ViewPointManager {
 
     public void addViewPoint(ViewPoint viewpoint){
         viewpoints.put(viewpoint.getName(), viewpoint);
-        plugin.getConfig().set("viewpoints." + viewpoint.getName(), LocationSerializer.toString(viewpoint.getLocation()));
+        plugin.getConfig().set("viewpoints." + viewpoint.getName() + ".loc", LocationSerializer.toString(viewpoint.getLocation()));
+        plugin.getConfig().set("viewpoints." + viewpoint.getName() + ".type", viewpoint.getType().toString());
         plugin.saveConfig();
     }
 

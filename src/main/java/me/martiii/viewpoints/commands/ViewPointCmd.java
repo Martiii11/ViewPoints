@@ -2,6 +2,7 @@ package me.martiii.viewpoints.commands;
 
 import me.martiii.viewpoints.ViewPoints;
 import me.martiii.viewpoints.viewpoint.ViewPoint;
+import me.martiii.viewpoints.viewpoint.ViewPointType;
 import net.minecraft.server.v1_11_R1.EntityArmorStand;
 import net.minecraft.server.v1_11_R1.EntityPlayer;
 import net.minecraft.server.v1_11_R1.PacketPlayOutCamera;
@@ -9,6 +10,7 @@ import net.minecraft.server.v1_11_R1.PacketPlayOutGameStateChange;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -78,20 +80,25 @@ public class ViewPointCmd implements CommandExecutor, Listener {
                         armorStand.setVisible(false);
                         armorStand.setGravity(false);
 
-                        EntityArmorStand entity = ((CraftArmorStand) armorStand).getHandle();
-                        new BukkitRunnable() {
-                            @Override
-                            public void run() {
-                                if (!playersInfo.containsKey(player)){
-                                    cancel();
-                                    return;
+                        if (viewPoint.getType().equals(ViewPointType.STATIC)) {
+                            EntityArmorStand entity = ((CraftArmorStand) armorStand).getHandle();
+                            new BukkitRunnable() {
+                                @Override
+                                public void run() {
+                                    if (!playersInfo.containsKey(player)) {
+                                        cancel();
+                                        return;
+                                    }
+                                    PacketPlayOutCamera packetCamera = new PacketPlayOutCamera(entity);
+                                    ((CraftPlayer) player).getHandle().playerConnection.sendPacket(packetCamera);
                                 }
-                                PacketPlayOutCamera packetCamera = new PacketPlayOutCamera(entity);
-                                ((CraftPlayer) player).getHandle().playerConnection.sendPacket(packetCamera);
-                            }
-                        }.runTaskTimer(plugin, 1, 5);
+                            }.runTaskTimer(plugin, 1, 5);
+                        } else if (viewPoint.getType().equals(ViewPointType.MOBILE)){
+                            armorStand.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(0);
+                            armorStand.addPassenger(player);
+                        }
 
-                        playersInfo.put(player, new PlayerInfo(oldPlayerLoc, oldGamemode, oldFlying, oldAllowFlight, oldContents, oldArmor, armorStand));
+                        playersInfo.put(player, new PlayerInfo(viewPoint.getType(), oldPlayerLoc, oldGamemode, oldFlying, oldAllowFlight, oldContents, oldArmor, armorStand));
                     } else {
                         player.sendMessage(ChatColor.RED + "That viewpoint doesn't exist.");
                     }
@@ -144,11 +151,22 @@ public class ViewPointCmd implements CommandExecutor, Listener {
     }
 
     private void goBack(Player player){
-        EntityPlayer entityPlayer = ((CraftPlayer) player).getHandle();
-        PacketPlayOutCamera packetCamera = new PacketPlayOutCamera(entityPlayer);
-        entityPlayer.playerConnection.sendPacket(packetCamera);
-
         PlayerInfo pi = playersInfo.remove(player);
+        if (pi.getViewPointType().equals(ViewPointType.STATIC)) {
+            EntityPlayer entityPlayer = ((CraftPlayer) player).getHandle();
+            PacketPlayOutCamera packetCamera = new PacketPlayOutCamera(entityPlayer);
+            entityPlayer.playerConnection.sendPacket(packetCamera);
+        } else if (pi.getViewPointType().equals(ViewPointType.MOBILE)){
+            pi.getEntity().removePassenger(player);
+            //pi.getLocation().getChunk().load();
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    player.teleport(pi.getLocation());
+                }
+            }.runTaskLater(plugin, 2L);
+        }
+
         player.setGameMode(GameMode.SPECTATOR);
         player.setGameMode(pi.getGameMode());
         player.getInventory().setContents(pi.getInvContents());
@@ -161,6 +179,7 @@ public class ViewPointCmd implements CommandExecutor, Listener {
     }
 
     public class PlayerInfo {
+        private ViewPointType viewPointType;
         private Location location;
         private GameMode gameMode;
         private boolean flying;
@@ -169,7 +188,8 @@ public class ViewPointCmd implements CommandExecutor, Listener {
         private ItemStack[] armor;
         private ArmorStand entity;
 
-        PlayerInfo(Location location, GameMode gameMode, boolean flying, boolean allowFlight, ItemStack[] invContents, ItemStack[] armor, ArmorStand entity) {
+        PlayerInfo(ViewPointType viewPointType, Location location, GameMode gameMode, boolean flying, boolean allowFlight, ItemStack[] invContents, ItemStack[] armor, ArmorStand entity) {
+            this.viewPointType = viewPointType;
             this.location = location;
             this.gameMode = gameMode;
             this.flying = flying;
@@ -177,6 +197,10 @@ public class ViewPointCmd implements CommandExecutor, Listener {
             this.invContents = invContents;
             this.armor = armor;
             this.entity = entity;
+        }
+
+        public ViewPointType getViewPointType() {
+            return viewPointType;
         }
 
         Location getLocation() {
