@@ -7,7 +7,7 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-public class DelViewPointCmd implements CommandExecutor{
+public class DelViewPointCmd implements CommandExecutor {
     private ViewPoints plugin;
 
     public DelViewPointCmd(ViewPoints plugin) {
@@ -16,11 +16,11 @@ public class DelViewPointCmd implements CommandExecutor{
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (sender instanceof Player){
+        if (sender instanceof Player) {
             Player player = (Player) sender;
-            if (args.length >= 1){
+            if (args.length >= 1) {
                 String v = args[0];
-                if (plugin.getViewPointManager().viewPointExist(v)){
+                if (plugin.getViewPointManager().viewPointExist(v)) {
                     plugin.getViewPointManager().removeViewPoint(v);
                     player.sendMessage(ChatColor.GREEN + "Viewpoint " + v + " deleted!");
                 } else {

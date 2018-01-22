@@ -1,6 +1,7 @@
 package me.martiii.viewpoints.commands;
 
 import me.martiii.viewpoints.ViewPoints;
+import me.martiii.viewpoints.utils.Titles;
 import me.martiii.viewpoints.viewpoint.ViewPoint;
 import me.martiii.viewpoints.viewpoint.ViewPointType;
 import net.minecraft.server.v1_11_R1.EntityArmorStand;
@@ -31,7 +32,9 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 public class ViewPointCmd implements CommandExecutor, Listener {
     private ViewPoints plugin;
@@ -45,12 +48,12 @@ public class ViewPointCmd implements CommandExecutor, Listener {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (sender instanceof Player){
+        if (sender instanceof Player) {
             Player player = (Player) sender;
-            if (!playersInfo.containsKey(player)){
-                if (args.length >= 1){
+            if (!playersInfo.containsKey(player)) {
+                if (args.length >= 1) {
                     String v = args[0];
-                    if (plugin.getViewPointManager().viewPointExist(v)){
+                    if (plugin.getViewPointManager().viewPointExist(v)) {
                         ViewPoint viewPoint = plugin.getViewPointManager().getViewPoint(v);
                         Location location = viewPoint.getLocation().clone();
                         Location oldPlayerLoc = player.getLocation().clone();
@@ -93,9 +96,15 @@ public class ViewPointCmd implements CommandExecutor, Listener {
                                     ((CraftPlayer) player).getHandle().playerConnection.sendPacket(packetCamera);
                                 }
                             }.runTaskTimer(plugin, 1, 5);
-                        } else if (viewPoint.getType().equals(ViewPointType.MOBILE)){
+                        } else if (viewPoint.getType().equals(ViewPointType.MOBILE)) {
                             armorStand.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(0);
                             armorStand.addPassenger(player);
+                            new BukkitRunnable() {
+                                @Override
+                                public void run() {
+                                    Titles.sendHotbarPacket(player, Titles.toJSON(""));
+                                }
+                            }.runTaskLater(plugin, 1);
                         }
 
                         playersInfo.put(player, new PlayerInfo(viewPoint.getType(), oldPlayerLoc, oldGamemode, oldFlying, oldAllowFlight, oldContents, oldArmor, armorStand));
@@ -115,56 +124,60 @@ public class ViewPointCmd implements CommandExecutor, Listener {
     }
 
     @EventHandler
-    public void onDrop(PlayerDropItemEvent event){
-        if (playersInfo.containsKey(event.getPlayer())){
+    public void onDrop(PlayerDropItemEvent event) {
+        if (playersInfo.containsKey(event.getPlayer())) {
             event.setCancelled(true);
         }
     }
 
     @EventHandler
-    public void onInvClick(InventoryClickEvent event){
+    public void onInvClick(InventoryClickEvent event) {
         Player player = (Player) event.getWhoClicked();
-        if (playersInfo.containsKey(player)){
+        if (playersInfo.containsKey(player)) {
             event.setCancelled(true);
         }
     }
 
     @EventHandler
-    public void onTeleport(PlayerTeleportEvent event){
-        if (playersInfo.containsKey(event.getPlayer())){
-            goBack(event.getPlayer());
+    public void onTeleport(PlayerTeleportEvent event) {
+        if (playersInfo.containsKey(event.getPlayer())) {
+            goBack(event.getPlayer(), false);
         }
     }
 
     @EventHandler
-    public void onShift(PlayerToggleSneakEvent event){
-        if (playersInfo.containsKey(event.getPlayer()) && event.isSneaking()){
-            goBack(event.getPlayer());
+    public void onShift(PlayerToggleSneakEvent event) {
+        if (playersInfo.containsKey(event.getPlayer()) && event.isSneaking()) {
+            goBack(event.getPlayer(), false);
         }
     }
 
     @EventHandler
-    public void onQuit(PlayerQuitEvent event){
-        if (playersInfo.containsKey(event.getPlayer())){
-            goBack(event.getPlayer());
+    public void onQuit(PlayerQuitEvent event) {
+        if (playersInfo.containsKey(event.getPlayer())) {
+            goBack(event.getPlayer(), false);
         }
     }
 
-    private void goBack(Player player){
+    private void goBack(Player player, boolean force) {
         PlayerInfo pi = playersInfo.remove(player);
         if (pi.getViewPointType().equals(ViewPointType.STATIC)) {
             EntityPlayer entityPlayer = ((CraftPlayer) player).getHandle();
             PacketPlayOutCamera packetCamera = new PacketPlayOutCamera(entityPlayer);
             entityPlayer.playerConnection.sendPacket(packetCamera);
-        } else if (pi.getViewPointType().equals(ViewPointType.MOBILE)){
+        } else if (pi.getViewPointType().equals(ViewPointType.MOBILE)) {
             pi.getEntity().removePassenger(player);
             //pi.getLocation().getChunk().load();
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    player.teleport(pi.getLocation());
-                }
-            }.runTaskLater(plugin, 2L);
+            if (!force) {
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        player.teleport(pi.getLocation());
+                    }
+                }.runTaskLater(plugin, 2L);
+            } else {
+                player.teleport(pi.getLocation());
+            }
         }
 
         player.setGameMode(GameMode.SPECTATOR);
@@ -176,6 +189,11 @@ public class ViewPointCmd implements CommandExecutor, Listener {
         player.setFlying(pi.wasFlying());
         player.removePotionEffect(PotionEffectType.INVISIBILITY);
         pi.getEntity().remove();
+    }
+
+    public void goBackAll(){
+        List<Player> ps = new ArrayList<>(playersInfo.keySet());
+        ps.forEach(player -> goBack(player, true));
     }
 
     public class PlayerInfo {
@@ -199,7 +217,7 @@ public class ViewPointCmd implements CommandExecutor, Listener {
             this.entity = entity;
         }
 
-        public ViewPointType getViewPointType() {
+        ViewPointType getViewPointType() {
             return viewPointType;
         }
 

@@ -7,13 +7,23 @@ import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
-public class SetViewPointCmd implements CommandExecutor{
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class SetViewPointCmd implements CommandExecutor, TabCompleter{
     private ViewPoints plugin;
+    private List<String> types;
 
     public SetViewPointCmd(ViewPoints plugin) {
         this.plugin = plugin;
+
+        types = new ArrayList<>();
+        types.add("static");
+        types.add("mobile");
     }
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -39,5 +49,13 @@ public class SetViewPointCmd implements CommandExecutor{
             sender.sendMessage(ChatColor.RED + "This command can only be used in game.");
         }
         return true;
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        if (args.length == 2){
+            return types;
+        }
+        return Collections.emptyList();
     }
 }

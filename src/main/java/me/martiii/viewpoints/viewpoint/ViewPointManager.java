@@ -6,6 +6,7 @@ import org.bukkit.Location;
 import org.bukkit.configuration.file.FileConfiguration;
 
 import java.util.HashMap;
+import java.util.Set;
 
 public class ViewPointManager {
     private HashMap<String, ViewPoint> viewpoints;
@@ -61,5 +62,9 @@ public class ViewPointManager {
         viewpoints.remove(viewpoint);
         plugin.getConfig().set("viewpoints." + viewpoint, null);
         plugin.saveConfig();
+    }
+
+    public Set<String> getViewPointList(){
+        return viewpoints.keySet();
     }
 }
