@@ -4,14 +4,18 @@ version: 1.2.1
 author: Martiii
 commands:
   viewpoint:
+    aliases: [vw]
     permission: viewpoint.view
     description: Go to a viewpoint
   setviewpoint:
+    aliases: [setvw]
     permission: viewpoint.set
     description: Set a viewpoint
   delviewpoint:
+    aliases: [delvw]
     permission: viewpoint.delete
     description: Delete a viewpoint
   viewpointreload:
+    aliases: [vwreload]
     permission: viewpoint.reload
     description: Reload config file

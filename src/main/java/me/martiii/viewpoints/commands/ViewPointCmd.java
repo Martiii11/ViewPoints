@@ -100,11 +100,17 @@ public class ViewPointCmd implements CommandExecutor, Listener {
                             armorStand.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(0);
                             armorStand.addPassenger(player);
                             new BukkitRunnable() {
+                                int c = 0;
                                 @Override
                                 public void run() {
+                                    if (c >= 4) {
+                                        cancel();
+                                        return;
+                                    }
                                     Titles.sendHotbarPacket(player, Titles.toJSON(""));
+                                    c++;
                                 }
-                            }.runTaskLater(plugin, 1);
+                            }.runTaskTimer(plugin, 1, 1);
                         }
 
                         playersInfo.put(player, new PlayerInfo(viewPoint.getType(), oldPlayerLoc, oldGamemode, oldFlying, oldAllowFlight, oldContents, oldArmor, armorStand));
